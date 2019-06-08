@@ -67,3 +67,42 @@ chernobyl_tidy <- chernobyl %>%
   unnest_tokens(word, text, strip_numeric = TRUE)
 ```
 
+## Filtering
+Create a _data set_ without stop words. 
+```{r}
+chernobyl_tidy_fil <- chernobyl_tidy %>% 
+  anti_join(stop_words)
+
+characters <- c("legasov", "shcherbina", "dyatlov", "bacho", "pavel",
+                "shcherbina", "khomyuk", "toptunov", "akimov", "lyudmilla",
+                "bryukhanov", "tarakanov", "fomin", "sitnikov", "gorbachev",
+                "vasily", "pikalov", "dmitri", "yuvchenko", "gorbachenko",
+                "stolyarchuk")
+
+```
+
+```{r}
+chernobyl_tidy_fil %>% 
+  group_by(episode, word) %>% 
+  count(sort = TRUE) %>% 
+  filter(!word %in% characters) %>% 
+  group_by(episode) %>% 
+  top_n(10, n) %>%
+  ungroup() %>% 
+  mutate(
+    episode = fct_reorder(episode, n)
+  ) %>% 
+  ggplot(aes(word, n))+
+  geom_col(fill = "#0D0D0D")+
+  facet_wrap(~episode, scales = "free_y")+
+  coord_flip()+
+  theme_minimal()+theme(legend.position = "none")+
+  labs(caption = "Viz: @RiversArthur \nData: https://johnaugust.com ",
+       x = NULL, y = NULL)+
+  theme(panel.background = element_rect(fill = "#F2E205"), strip.text = element_text(size = 13),
+        panel.grid.major.y = element_blank(),
+        axis.text.y = element_text(size = 10),
+        plot.background = element_rect(fill = "#F2E205", color = "#F2E205"))
+
+```
+
