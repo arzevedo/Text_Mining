@@ -105,11 +105,11 @@ chernobyl_tidy_fil %>%
   coord_flip()+
   theme_minimal()+theme(legend.position = "none")+
   labs(caption = "Viz: @RiversArthur \nData: https://johnaugust.com ",
-       x = NULL, y = NULL)+
+       x = NULL, y = NULL, title = "Most freq words")+
   theme(panel.background = element_rect(fill = "#F2E205"), strip.text = element_text(size = 13),
         panel.grid.major.y = element_blank(),
         axis.text.y = element_text(size = 10),
         plot.background = element_rect(fill = "#F2E205", color = "#F2E205"))
 ```
 
-![](chernobyl_files/figure-gfm/unnamed-chunk-2-1.png)<!-- -->
+<img src="chernobyl_files/figure-gfm/Most frequent word-1.png" style="display: block; margin: auto;" />
