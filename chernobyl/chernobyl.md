@@ -1,30 +1,26 @@
----
-title: "A text analysis of Chernobyl's screenplay"
-author: "Arthur Azevedo"
-date: "08/06/2019"
-output: rmarkdown::github_document
----
-
-```{r setup and libraries, include=FALSE}
-knitr::opts_chunk$set(echo = TRUE)
-library(tidyverse)
-library(pdftools)
-library(tidytext)
-library(ggraph)
-library(igraph)
-```
+A text analysis of Chernobyl’s screenplay
+================
+Arthur Azevedo
+08/06/2019
 
 # First things first
-I have to tell you right away that I loved the series the political, horror and drama were entangled in a way that amazed me so much that I couldn't wait for the next episode.
-When I saw Mazin on twitter saying that he gave open access to the screenplay i had to have a look.
-One last thing. This code/text may contain spoilers. I will give some warning before dropping something major to the plot. But be warned.
 
-So... let's get the data
+I have to tell you right away that I loved the series the political,
+horror and drama were entangled in a way that amazed me so much that I
+couldn’t wait for the next episode. When I saw Mazin on twitter saying
+that he gave open access to the screenplay i had to have a look. One
+last thing. This code/text may contain spoilers. I will give some
+warning before dropping something major to the plot. But be warned.
+
+So… let’s get the data
 
 ## Extracting the data
 
-I'll download the screenplays for reproducibility purposes. I made a loop in the `download.file` function for every episode.
-```{r Read and Download, message=FALSE}
+I’ll download the screenplays for reproducibility purposes. I made a
+loop in the `download.file` function for every
+episode.
+
+``` r
 episode_name <- c("11_23_45", "2Please-Remain-Calm", "3Open-Wide-O-Earth",
                   "4The-Happiness-Of-All-Mankind", "5Vichnaya-Pamyat")
 
@@ -37,10 +33,13 @@ for(episode in episode_name){
 }
 ```
 
-## Assembling 
-The .pdf format is pleasant to work with text. Using the `pdf_text` function from the `pdftools` package we can assemble the text into lists. Then we merge all in a _tibble_.
-```{r Assemble}
+## Assembling
 
+The .pdf format is pleasant to work with text. Using the `pdf_text`
+function from the `pdftools` package we can assemble the text into
+lists. Then we merge all in a *tibble*.
+
+``` r
 pdf_names <- paste0(episode_name, ".pdf")
 raw_text <- map(pdf_names, pdf_text)
 
@@ -55,33 +54,41 @@ chernobyl <- tibble(episode = pdf_names, text = raw_text) %>%
         TRUE           ~ "Vichnaya Pamyat"
       )
   )
-
 ```
 
 ## Tidying
-[The _tidy_ format](https://www.tidyverse.org/learn/) makes easy handling data. Julia Silge and David Robinson defining tidy text format as being a table with one token per row. A token is a meaningful unit of text.
-With all that said, let's travel to the north of Ukraine.
-```{r tidying}
+
+[The *tidy* format](https://www.tidyverse.org/learn/) makes easy
+handling data. Julia Silge and David Robinson defining tidy text format
+as being a table with one token per row. A token is a meaningful unit of
+text. With all that said, let’s travel to the north of Ukraine.
+
+``` r
 chernobyl_tidy <- chernobyl %>% 
   unnest %>% # pdfs_text is a list
   unnest_tokens(word, text, strip_numeric = TRUE)
 ```
 
 ## Filtering
-Create a _data set_ without stop words. 
-```{r}
+
+Create a *data set* without stop words.
+
+``` r
 chernobyl_tidy_fil <- chernobyl_tidy %>% 
   anti_join(stop_words)
+```
 
+    ## Joining, by = "word"
+
+``` r
 characters <- c("legasov", "shcherbina", "dyatlov", "bacho", "pavel",
                 "shcherbina", "khomyuk", "toptunov", "akimov", "lyudmilla",
                 "bryukhanov", "tarakanov", "fomin", "sitnikov", "gorbachev",
                 "vasily", "pikalov", "dmitri", "yuvchenko", "gorbachenko",
                 "stolyarchuk")
-
 ```
 
-```{r}
+``` r
 chernobyl_tidy_fil %>% 
   group_by(episode, word) %>% 
   count(sort = TRUE) %>% 
@@ -103,6 +110,6 @@ chernobyl_tidy_fil %>%
         panel.grid.major.y = element_blank(),
         axis.text.y = element_text(size = 10),
         plot.background = element_rect(fill = "#F2E205", color = "#F2E205"))
-
 ```
 
+![](chernobyl_files/figure-gfm/unnamed-chunk-2-1.png)<!-- -->
