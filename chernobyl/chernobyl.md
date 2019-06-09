@@ -47,9 +47,9 @@ chernobyl <- tibble(episode = pdf_names, text = raw_text) %>%
   mutate(
     episode =
       case_when(
-        .$episode == "11_23_45.pdf" ~ "1:23:45",
-        .$episode == "2Please-Remain-Calm.pdf" ~ "Please Remain Calm",
-        .$episode == "3Open-Wide-O-Earth.pdf" ~ "Open Wide, O Earth",
+        .$episode == "11_23_45.pdf"                      ~ "1:23:45",
+        .$episode == "2Please-Remain-Calm.pdf"           ~ "Please Remain Calm",
+        .$episode == "3Open-Wide-O-Earth.pdf"            ~ "Open Wide, O Earth",
         .$episode == "4The-Happiness-Of-All-Mankind.pdf" ~ "The Happiness Of All Mankind",
         TRUE           ~ "Vichnaya Pamyat"
       )
@@ -66,7 +66,10 @@ text. With all that said, let’s travel to the north of Ukraine.
 ``` r
 chernobyl_tidy <- chernobyl %>% 
   unnest %>% # pdfs_text is a list
-  unnest_tokens(word, text, strip_numeric = TRUE)
+  unnest_tokens(word, text, strip_numeric = TRUE) %>% 
+  mutate(episode = factor(episode,
+                          levels = c("1:23:45", "Please Remain Calm", "Open Wide, O Earth",
+                                     "The Happiness Of All Mankind", "Vichnaya Pamyat")))
 ```
 
 ## Filtering
@@ -85,31 +88,112 @@ characters <- c("legasov", "shcherbina", "dyatlov", "bacho", "pavel",
                 "shcherbina", "khomyuk", "toptunov", "akimov", "lyudmilla",
                 "bryukhanov", "tarakanov", "fomin", "sitnikov", "gorbachev",
                 "vasily", "pikalov", "dmitri", "yuvchenko", "gorbachenko",
-                "stolyarchuk")
+                "stolyarchuk", "boris", "charkov", "vetrova", "shadov",
+                "garo", "stepashin")
 ```
 
+## Ploting Frequency
+
 ``` r
+reorder_within <- function(x, by, within, fun = mean, sep = "___", ...) {
+  new_x <- paste(x, within, sep = sep)
+  stats::reorder(new_x, by, FUN = fun)
+}
+scale_x_reordered <- function(..., sep = "___") {
+  reg <- paste0(sep, ".+$")
+  ggplot2::scale_x_discrete(labels = function(x) gsub(reg, "", x), ...)
+}
 chernobyl_tidy_fil %>% 
   group_by(episode, word) %>% 
   count(sort = TRUE) %>% 
   filter(!word %in% characters) %>% 
   group_by(episode) %>% 
   top_n(10, n) %>%
-  ungroup() %>% 
-  mutate(
-    episode = fct_reorder(episode, n)
-  ) %>% 
-  ggplot(aes(word, n))+
+  ungroup() %>%
+  ggplot(aes(reorder_within(word, n, episode), n))+
   geom_col(fill = "#0D0D0D")+
+  scale_x_reordered()+
   facet_wrap(~episode, scales = "free_y")+
   coord_flip()+
   theme_minimal()+theme(legend.position = "none")+
   labs(caption = "Viz: @RiversArthur \nData: https://johnaugust.com ",
-       x = NULL, y = NULL, title = "Most freq words")+
+       x = NULL, y = NULL, title = "Most frequent words",
+       subtitle = "Without stop words and characters names")+
   theme(panel.background = element_rect(fill = "#F2E205"), strip.text = element_text(size = 13),
-        panel.grid.major.y = element_blank(),
+        panel.grid.major.y = element_blank(), panel.grid.major = element_blank(),
         axis.text.y = element_text(size = 10),
         plot.background = element_rect(fill = "#F2E205", color = "#F2E205"))
 ```
 
 <img src="chernobyl_files/figure-gfm/Most frequent word-1.png" style="display: block; margin: auto;" />
+
+## TF-IDF
+
+``` r
+chernobyl_tidy_fil_per_epi <- chernobyl_tidy_fil %>% 
+  count(episode, word, sort = TRUE) %>% 
+  ungroup()
+
+total_words <- chernobyl_tidy_fil_per_epi %>% 
+  group_by(episode) %>% 
+  summarise(total = sum(n))
+
+chernobyl_tidy_fil_per_epi <- left_join(chernobyl_tidy_fil_per_epi, total_words)
+```
+
+    ## Joining, by = "episode"
+
+``` r
+chernobyl_tidy_fil_per_epi <- chernobyl_tidy_fil_per_epi %>%
+  bind_tf_idf(word, episode, n )
+
+chernobyl_tidy_fil_per_epi %>%
+  arrange(desc(tf_idf)) %>%
+  mutate(word = factor(word, levels = rev(unique(word)))) %>%
+  group_by(episode) %>%
+  top_n(10) %>% 
+  ungroup %>% 
+  ggplot(aes(reorder_within(word, tf_idf, episode), tf_idf)) +
+  geom_col(show.legend = FALSE, fill = "#0D0D0D")+
+  facet_wrap(~episode, ncol = 1, scales = "free_y") + 
+  coord_flip()+
+  scale_x_reordered()+ scale_y_continuous(labels = c("Less important words\n in each episode",
+                                                     "Important words\n in each episode"),
+                                          breaks = c(0.001,.033))+
+  theme_minimal()+theme(legend.position = "none")+
+  labs(caption = "Viz: @RiversArthur \nData: https://johnaugust.com ",
+       x = NULL, y = NULL, title = "Highest tf-idf words in each of Chernobyl's episodes")+
+  theme(panel.background = element_rect(fill = "#F2E205"), strip.text = element_text(size = 13),
+        panel.grid.major = element_blank(), panel.grid = element_blank(),
+        axis.text.y = element_text(size = 10),
+        plot.background = element_rect(fill = "#F2E205", color = "#F2E205"))
+```
+
+    ## Selecting by tf_idf
+
+<img src="chernobyl_files/figure-gfm/TF-IDF-1.png" style="display: block; margin: auto;" />
+
+``` r
+chernobyl_bigram <- chernobyl_tidy_fil %>% 
+  unnest_tokens(bigram, word, token = "ngrams", n = 2) %>%
+  separate(bigram, c("word1", "word2"), sep = " ") %>%
+  filter(!word1 %in% stop_words$word,
+         !word2 %in% stop_words$word) %>%
+  group_by(episode) %>%
+  count(word1, word2, sort = TRUE) %>%
+  filter(n > 4) %>% 
+  graph_from_data_frame()
+
+a <- grid::arrow(type = "closed", length = unit(.10, "inches"))
+
+ggraph(chernobyl_bigram, layout = "fr") +  
+  geom_edge_link(aes(edge_alpha = log(n)), show.legend = FALSE, arrow = a, end_cap = circle(.05, 'inches')) +
+  geom_node_point(color = "#0D0D0D", size = 4) +  
+  geom_node_text(aes(label = name), vjust = 1, hjust = 1, color = "#5e4e00", size = 4.5) +  
+  theme_void()+
+  labs(caption = "Viz: @RiversArthur \nData: https://johnaugust.com ")+
+  theme(panel.background = element_rect(fill = "#F2E205"),plot.background = element_rect(fill = "#F2E205",
+                                                                                         color = "#F2E205"))
+```
+
+<img src="chernobyl_files/figure-gfm/Relationship between words-1.png" style="display: block; margin: auto;" />
