@@ -1,0 +1,34 @@
+---
+title: "A text analysis of The Lonely Island's lyrics"
+author: "Arthur Azevedo"
+date: "12/06/2019"
+output: rmarkdown::github_document
+---
+
+```{r setup, include=FALSE}
+knitr::opts_chunk$set(echo = TRUE)
+library(tidytext)
+library(tidyverse)
+```
+
+```{r Loading}
+tli_lyrics <- read_csv("The Lonely Island/the_lonely_island_lyrics.csv")
+```
+
+```{r unnest tokens}
+tli_lyrics_words <- tli_lyrics %>% 
+  unnest_tokens(word, line)
+
+tli_lyrics_words %>% 
+  filter(!word %in% stop_words$word) %>% 
+  group_by(album_name) %>% 
+  filter(!is.na(album_name)) %>% 
+  count(word, sort = TRUE) %>% 
+  top_n(10) %>% 
+  ggplot(aes(x = word, y = n))+
+  geom_col()+
+  coord_flip()+
+  facet_wrap(~album_name, scales = "free_y")
+
+```
+

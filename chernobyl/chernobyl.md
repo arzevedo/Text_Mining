@@ -203,8 +203,8 @@ a <- grid::arrow(type = "closed", length = unit(.10, "inches"))
 
 ggraph(chernobyl_bigram, layout = "fr") +  
   geom_edge_link(aes(edge_alpha = n), show.legend = FALSE, arrow = a, end_cap = circle(.05, 'inches')) +
-  geom_node_point(color = "#0D0D0D", size = 4) +  
-  geom_node_text(aes(label = name), vjust = 1, hjust = 1, color = "#5e4e00", size = 4.5) +  
+  geom_node_point(color = "#0D0D0D", size = 4, alpha = 0.5) +  
+  geom_node_text(aes(label = name), vjust = 1, hjust = 1, color = "#0D0D0D", size = 4) +  
   theme_void()+
   labs(caption = "Viz: @RiversArthur \nData: https://johnaugust.com ")+
   theme(panel.background = element_rect(fill = "#F2E205"),plot.background = element_rect(fill = "#F2E205",
@@ -217,6 +217,11 @@ ggraph(chernobyl_bigram, layout = "fr") +
 
 ``` r
 library(topicmodels)
+```
+
+    ## Warning: package 'topicmodels' was built under R version 3.5.3
+
+``` r
 chernobyl_count_word <- chernobyl_tidy_fil %>% 
   count(episode, word, sort = TRUE) %>% 
   ungroup()
@@ -303,7 +308,7 @@ chernobyl_tidy %>%
     ##  8 pain     23
     ##  9 lost     21
     ## 10 sorry    21
-    ## # … with 377 more rows
+    ## # ... with 377 more rows
 
 ``` r
 cher_afin <- chernobyl_tidy %>% 
@@ -335,10 +340,10 @@ cher_bing_ncr <- bind_rows(
 
 ``` r
 bind_rows(
-  cher_afin,
-  cher_bing_ncr) %>% 
+  cher_afin, cher_bing_ncr) %>% 
   ggplot(aes(index, sentiment, fill = method)) +
   geom_col(show.legend = FALSE)+
+  geom_vline(xintercept = c(12*1:4))+
   facet_wrap(~method, ncol = 1, scales = "free_y")+
   scale_fill_manual(values = c("AFINN" = "#9CFF59", "BING" = "#000000",
                                "NCR" = "#F2E205"))+
