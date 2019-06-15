@@ -49,7 +49,7 @@ scale_y_reordered <- function(..., sep = "___") {
 ## _"There's no way I’ll let my kids listen to it"_ 
 
 The first thing that I'll do is to look at the most frequent words, let's see per Album.
-```{r part1, message=FALSE}
+```{r part1, message=FALSE, fig.width=8}
 tli_lyrics_words <- tli_lyrics %>% 
   unnest_tokens(word, line) %>% 
   mutate(album_name = factor(album_name,
@@ -68,7 +68,8 @@ tli_lyrics_words %>%
   mutate(word = reorder_within(word, n, album_name)) %>% 
   ggplot(aes(x = word, y = n))+
   geom_col()+
-  labs(x = NULL, y = "Count")+
+  labs(x = NULL, y = "Count", caption = "Viz: @RiversArthur",
+       title = "No Homo")+
   scale_x_reordered()+
   coord_flip()+
   facet_wrap(~album_name, scales = "free_y")+
@@ -76,4 +77,41 @@ tli_lyrics_words %>%
 
 ```  
 
-As I thought! lots of _boss_, _jizz_ and _pants_ in the first one. Well, a lot of f*** words in the second.
+As I thought! lots of _boss_, _jizz_ and _pants_ in the first one. Well, a lot of f*** words in the popstar, and probabily mark and josé are the so called bash brothers from the latest album.  
+4
+```{r TF-IDF, fig.width=8}
+tli_lyrics_words_per_album <- tli_lyrics_words %>% 
+  count(album_name, word, sort = TRUE) %>% 
+  ungroup()
+
+total_words <- tli_lyrics_words_per_album %>% 
+  group_by(album_name) %>% 
+  summarise(total = sum(n))
+
+tli_lyrics_words_per_album <- left_join(tli_lyrics_words_per_album, total_words)
+
+tli_lyrics_words_per_album <- tli_lyrics_words_per_album %>%
+  bind_tf_idf(word, album_name, n) %>% 
+  filter(album_name != "NA")
+
+tli_lyrics_words_per_album %>% 
+  arrange(desc(tf_idf)) %>%
+  mutate(word = factor(word, levels = rev(unique(word)))) %>%
+  group_by(album_name) %>%
+  top_n(10) %>% 
+  ungroup %>% 
+  ggplot(aes(reorder_within(word, tf_idf, album_name), tf_idf)) +
+  geom_col(show.legend = FALSE, aes(fill = album_name))+
+  facet_wrap(~album_name, scales = "free_y") + 
+  coord_flip()+
+  scale_x_reordered()+ scale_y_continuous(labels = c("Less important words\n in each album",
+                                                     "Important words\n in each album"),
+                                          breaks = c(0.001,.023))+
+  theme_minimal()+theme(legend.position = "none")+
+  labs(caption = "Viz: @RiversArthur",
+       x = NULL, y = NULL, title = "Highest tf-idf words in each of TLI's album")+
+  theme(strip.text = element_text(size = 8),
+        panel.grid.major = element_blank(), panel.grid = element_blank(),
+        axis.text.y = element_text(size = 10))
+
+```

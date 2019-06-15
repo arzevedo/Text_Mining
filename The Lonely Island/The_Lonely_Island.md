@@ -51,7 +51,8 @@ tli_lyrics_words %>%
   mutate(word = reorder_within(word, n, album_name)) %>% 
   ggplot(aes(x = word, y = n))+
   geom_col()+
-  labs(x = NULL, y = "Count")+
+  labs(x = NULL, y = "Count", caption = "Viz: @RiversArthur",
+       title = "No Homo")+
   scale_x_reordered()+
   coord_flip()+
   facet_wrap(~album_name, scales = "free_y")+
@@ -61,4 +62,50 @@ tli_lyrics_words %>%
 ![](The_Lonely_Island_files/figure-gfm/part1-1.png)<!-- -->
 
 As I thought\! lots of *boss*, *jizz* and *pants* in the first one.
-Well, a lot of f\*\*\* words in the second.
+Well, a lot of f\*\*\* words in the popstar, and probabily mark and josé
+are the so called bash brothers from the latest album.  
+4
+
+``` r
+tli_lyrics_words_per_album <- tli_lyrics_words %>% 
+  count(album_name, word, sort = TRUE) %>% 
+  ungroup()
+
+total_words <- tli_lyrics_words_per_album %>% 
+  group_by(album_name) %>% 
+  summarise(total = sum(n))
+
+tli_lyrics_words_per_album <- left_join(tli_lyrics_words_per_album, total_words)
+```
+
+    ## Joining, by = "album_name"
+
+``` r
+tli_lyrics_words_per_album <- tli_lyrics_words_per_album %>%
+  bind_tf_idf(word, album_name, n) %>% 
+  filter(album_name != "NA")
+
+tli_lyrics_words_per_album %>% 
+  arrange(desc(tf_idf)) %>%
+  mutate(word = factor(word, levels = rev(unique(word)))) %>%
+  group_by(album_name) %>%
+  top_n(10) %>% 
+  ungroup %>% 
+  ggplot(aes(reorder_within(word, tf_idf, album_name), tf_idf)) +
+  geom_col(show.legend = FALSE, aes(fill = album_name))+
+  facet_wrap(~album_name, scales = "free_y") + 
+  coord_flip()+
+  scale_x_reordered()+ scale_y_continuous(labels = c("Less important words\n in each album",
+                                                     "Important words\n in each album"),
+                                          breaks = c(0.001,.023))+
+  theme_minimal()+theme(legend.position = "none")+
+  labs(caption = "Viz: @RiversArthur",
+       x = NULL, y = NULL, title = "Highest tf-idf words in each of TLI's album")+
+  theme(strip.text = element_text(size = 8),
+        panel.grid.major = element_blank(), panel.grid = element_blank(),
+        axis.text.y = element_text(size = 10))
+```
+
+    ## Selecting by tf_idf
+
+![](The_Lonely_Island_files/figure-gfm/TF-IDF-1.png)<!-- -->
