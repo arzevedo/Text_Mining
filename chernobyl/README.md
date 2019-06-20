@@ -5,12 +5,12 @@ Arthur Azevedo
 
 # First things first ☢️
 
-I have to tell you right away that I loved the series the political,
-horror and drama were entangled in a way that amazed me so much that I
-couldn’t wait for the next episode. When I saw Mazin on twitter saying
-that he gave open access to the screenplay i had to have a look. One
-last thing. This code/text may contain spoilers. I will give some
-warning before dropping something major to the plot. But be warned.
+I must tell you right away that I loved the series the political, horror
+and drama were entangled in a way that amazed me so much that I couldn’t
+wait for the next episode. When I saw Mazin on twitter saying that he
+gave open access to the screenplay i had to have a look. One last thing.
+This code/text may contain spoilers. I will give some warning before
+dropping something major to the plot. But be warned.
 
 So… let’s get the data
 
@@ -79,12 +79,8 @@ Create a *data set* without stop words.
 
 ``` r
 chernobyl_tidy_fil <- chernobyl_tidy %>% 
-  anti_join(stop_words)
-```
+  anti_join(stop_words, by = "word")
 
-    ## Joining, by = "word"
-
-``` r
 characters <- c("legasov", "shcherbina", "dyatlov", "bacho", "pavel",
                 "shcherbina", "khomyuk", "toptunov", "akimov", "lyudmilla",
                 "bryukhanov", "tarakanov", "fomin", "sitnikov", "gorbachev",
@@ -127,18 +123,18 @@ chernobyl_tidy_fil %>%
 ```
 
 <img src="chernobyl_files/figure-gfm/Most frequent word-1.png" style="display: block; margin: auto;" />
-Here we see the most worsds in each episode. I’ve filtered the stop
-words and character names because Legasov appears just too much in every
-episode besides the first one. After that it was holesome see the major
-topics appers. Remember the *spoiler* embargo for this miniseries ins’t
-over yet. So we can say that the first episode is all about a building
+Here we see the most words in each episode. I’ve filtered the stop words
+and character names because Legasov appears just too much in every
+episode besides the first one. After that it was hole some see the major
+topics appears. Remember the *spoiler* embargo for this miniseries isn’t
+over yet. So, we can say that the first episode is all about a building
 or reactor that may or may not be on fire. The second also has fire but
-has water too and soldiers uses radio. Well you got the ideia. Next
+has water too and soldiers uses radio. Well you got the idea. Next,
 we’ll see what the different episodes have of different among them.
 
-## TF-IDF ☢️
+## TF-IDF or Я люблю тебя родина ☢️
 
-The idea do tf-idf is to find the important words for the content of
+The idea of tf-idf is to find the important words for the content of
 each episode by decreasing the weight for the commonly used words and
 increasing the weight for words that are not used very much.
 
@@ -151,12 +147,9 @@ total_words <- chernobyl_tidy_fil_per_epi %>%
   group_by(episode) %>% 
   summarise(total = sum(n))
 
-chernobyl_tidy_fil_per_epi <- left_join(chernobyl_tidy_fil_per_epi, total_words)
-```
+chernobyl_tidy_fil_per_epi <- left_join(chernobyl_tidy_fil_per_epi, total_words,
+                                        by = "episode")
 
-    ## Joining, by = "episode"
-
-``` r
 chernobyl_tidy_fil_per_epi <- chernobyl_tidy_fil_per_epi %>%
   bind_tf_idf(word, episode, n )
 
@@ -170,23 +163,27 @@ chernobyl_tidy_fil_per_epi %>%
   geom_col(show.legend = FALSE, fill = "#0D0D0D")+
   facet_wrap(~episode, ncol = 1, scales = "free_y") + 
   coord_flip()+
-  scale_x_reordered()+ scale_y_continuous(labels = c("Less important words\n in each episode",
-                                                     "Important words\n in each episode"),
+  scale_x_reordered()+ scale_y_continuous(labels = c("Lower TF-IDF",
+                                                     "Higher TF-IDF"),
                                           breaks = c(0.001,.033))+
   theme_minimal()+theme(legend.position = "none")+
   labs(caption = "Viz: @RiversArthur \nData: https://johnaugust.com ",
-       x = NULL, y = NULL, title = "Highest tf-idf words in each of Chernobyl's episodes")+
+       x = NULL, y = NULL, title = "Highest tf-idf words in each of Chernobyl's episodes",
+       subtitle = "Top 10 Words")+
   theme(panel.background = element_rect(fill = "#F2E205"), strip.text = element_text(size = 13),
         panel.grid.major = element_blank(), panel.grid = element_blank(),
-        axis.text.y = element_text(size = 10),
+        axis.text.y = element_text(size = 12),
         plot.background = element_rect(fill = "#F2E205", color = "#F2E205"))
 ```
 
-    ## Selecting by tf_idf
-
 <img src="chernobyl_files/figure-gfm/TF-IDF-1.png" style="display: block; margin: auto;" />
 This time we don’t filter the most frequent words because their weight
-is important to see the most important words in each episode.
+is important to see the most important words in each episode. Aside for
+the diverse Russian character names (that may indicate several new
+characters per episode), there’s also some key words. The immediate
+aftermath of the catastrophe in the second episode is marked by
+*loudspeaker*. The badass miners that that enter headfirst in solving
+the problem on the third episode also arise in the top 10.
 
 ``` r
 chernobyl_bigram <- chernobyl_tidy_fil %>% 
@@ -203,8 +200,8 @@ a <- grid::arrow(type = "closed", length = unit(.10, "inches"))
 
 ggraph(chernobyl_bigram, layout = "fr") +  
   geom_edge_link(aes(edge_alpha = n), show.legend = FALSE, arrow = a, end_cap = circle(.05, 'inches')) +
-  geom_node_point(color = "#0D0D0D", size = 4) +  
-  geom_node_text(aes(label = name), vjust = 1, hjust = 1, color = "#5e4e00", size = 4.5) +  
+  geom_node_point(color = "#0D0D0D", size = 4, alpha = 0.5) +  
+  geom_node_text(aes(label = name), vjust = 1, hjust = 1, color = "#0D0D0D", size = 4) +  
   theme_void()+
   labs(caption = "Viz: @RiversArthur \nData: https://johnaugust.com ")+
   theme(panel.background = element_rect(fill = "#F2E205"),plot.background = element_rect(fill = "#F2E205",
@@ -212,48 +209,14 @@ ggraph(chernobyl_bigram, layout = "fr") +
 ```
 
 <img src="chernobyl_files/figure-gfm/Relationship between words-1.png" style="display: block; margin: auto;" />
-
-## Topic modeling ☢️
-
-``` r
-library(topicmodels)
-chernobyl_count_word <- chernobyl_tidy_fil %>% 
-  count(episode, word, sort = TRUE) %>% 
-  ungroup()
-desc_dtm <- chernobyl_count_word %>% 
-  cast_dtm(episode, word, n)
-
-desc_lda <- LDA(desc_dtm, k = 24, control = list(seed = 2019))
-desc_lda
-```
-
-    ## A LDA_VEM topic model with 24 topics.
-
-``` r
-tidy_lda <- tidy(desc_lda)
-
-
-tidy_lda %>% 
-  group_by(topic) %>% 
-  top_n(10) %>% 
-  ungroup() %>%
-  ggplot(aes(x = reorder_within(term, beta, topic), y = beta))+
-  geom_col()+
-  coord_flip()+
-  scale_x_reordered()+
-  facet_wrap(~topic, scales = "free_y")
-```
-
-    ## Selecting by beta
-
-![](chernobyl_files/figure-gfm/Topic%20modeling-1.png)<!-- -->
+INSERT
 
 ## Sentiment ☢️
 
-Now let1s perform a sentiment analysis on the bigram data, we can
-examine how often sentiment-associated words are preceded by *not* or
+Now let’s perform a sentiment analysis on the bigram data, we can
+examine how often sentiment-associated words are preceded by not or
 other negative words. We could use this to ignore or even reverse their
-contribution to the sentiment score. ON A HOLD
+contribution to the sentiment score.
 
 ``` r
 afinn <- get_sentiments(lexicon = "afinn")
@@ -274,9 +237,16 @@ negative_words %>%
   mutate(word2 = fct_reorder(word2, contribution)) %>% 
   ggplot(aes(word2, n * score, fill = n * score > 0))+
   geom_col(show.legend = FALSE)+
+  scale_fill_manual(values = c("#9CFF59", "white"))+
   labs(x = "Words preceded by negative words", 
-       y = "Sentiment score * number of occurrences")+
-  coord_flip()
+       title = "Words that may deceive the analises",
+       y = "Sentiment score * number of occurrences",
+       caption = "Viz: @RiversArthur \nData: https://johnaugust.com ")+
+  coord_flip()+
+  theme(panel.background = element_rect(fill = "#F2E205"),panel.grid.major.y = element_blank(),
+        panel.grid.major = element_blank(),
+        plot.background = element_rect(fill = "#F2E205",
+                                                                                         color = "#F2E205"))
 ```
 
 ![](chernobyl_files/figure-gfm/wrong%20sentiment-1.png)<!-- -->
@@ -287,8 +257,6 @@ chernobyl_tidy %>%
                filter(score < 0)) %>% 
   count(word, sort = TRUE)
 ```
-
-    ## Joining, by = "word"
 
     ## # A tibble: 387 x 2
     ##    word      n
@@ -303,7 +271,7 @@ chernobyl_tidy %>%
     ##  8 pain     23
     ##  9 lost     21
     ## 10 sorry    21
-    ## # … with 377 more rows
+    ## # ... with 377 more rows
 
 ``` r
 cher_afin <- chernobyl_tidy %>% 
@@ -311,11 +279,7 @@ cher_afin <- chernobyl_tidy %>%
   group_by(index = pag %/% 5) %>% 
   summarise(sentiment = sum(score)) %>% 
   mutate(method = "AFINN")
-```
 
-    ## Joining, by = "word"
-
-``` r
 cher_bing_ncr <- bind_rows(
   chernobyl_tidy %>% 
     inner_join(get_sentiments("bing")) %>% 
@@ -328,21 +292,17 @@ cher_bing_ncr <- bind_rows(
   count(method, index = pag %/% 5, sentiment) %>% 
   spread(sentiment, n, fill = 0) %>% 
   mutate(sentiment = positive - negative)
-```
 
-    ## Joining, by = "word"
-    ## Joining, by = "word"
-
-``` r
 bind_rows(
-  cher_afin,
-  cher_bing_ncr) %>% 
+  cher_afin, cher_bing_ncr) %>% 
   ggplot(aes(index, sentiment, fill = method)) +
   geom_col(show.legend = FALSE)+
+  geom_vline(xintercept = c(12*1:4))+
   facet_wrap(~method, ncol = 1, scales = "free_y")+
   scale_fill_manual(values = c("AFINN" = "#9CFF59", "BING" = "#000000",
                                "NCR" = "#F2E205"))+
   labs(caption = "Viz: @RiversArthur \nData: https://johnaugust.com ",
+       subtitle = "Each box is one episode",
        x = NULL, y = "Sentiment score", title = "Diferent sentiments scores by different methods")+
   theme_minimal()+
   theme(panel.background = element_rect(fill = "white"), strip.text = element_text(size = 13),
@@ -351,4 +311,12 @@ bind_rows(
         plot.background = element_rect(fill = "white", color = "white"))
 ```
 
-![](chernobyl_files/figure-gfm/more%20sentiment-1.png)<!-- -->
+<img src="chernobyl_files/figure-gfm/more sentiment-1.png" style="display: block; margin: auto;" />
+
+And there you go, isn’t the happiest series in the word but it sure was
+captivating.
+
+INSERT
+
+Now we wait the Russian
+[response](https://www.independent.co.uk/arts-entertainment/tv/news/chernobyl-hbo-ban-russia-tv-series-communist-party-response-a8958536.html).
